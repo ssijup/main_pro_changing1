@@ -10,7 +10,7 @@ app = Celery('main_pro')
 # Including the beat schedule in the configuration directly
 celery_schedule = {
     'archive_old_records_task': {
-        'task': 'netmagics.tasks.simple_task',
+        'task': 'netmagics.tasks.archive_old_records',
         'schedule': timedelta(minutes=2),
     },
 }
