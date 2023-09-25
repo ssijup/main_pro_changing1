@@ -190,3 +190,24 @@ class AdvocatesProfileView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+# New views 
+
+# membership status for advocate profile to know pending or approvied by anyone
+class AdvocateAssociationMembershipStatus(APIView):
+    # permission_classes = []
+
+    def get(self, request):
+        authenticated_adv = request.user
+        advocate = AdvocateAssociation.objects.filter(advocate__user = authenticated_adv)
+        serializer = AdvocateAssociationSerializer(advocate, many= True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+#View to display the expiry date of the advocate and also the how many days to the expiry date in advocate profile
+class AdvocateCurrentMembershipExpiry(APIView):
+    def get(self, request, ):
+        authenticated_adv = request.user
+        adv_associations = AssociationMembershipPayment.objects.filter(for_user_details__user = authenticated_adv, is_current = True)
+        serializer = AssociationMembershipPaymentSerializer(adv_associations, many = True)
+        return Response(serializer.data, status= status.HTTP_200_OK)
+    

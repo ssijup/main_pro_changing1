@@ -4,7 +4,8 @@ from django.urls import path, include
 from .views import ( AdvocatesListView, SuspendAdvocateView, EditAdvocateProfileView,
                     CreateAdvocatesListView,AdvocateEditFormView,AdvocatesPaymentView, AssociationAdvocateView,
                      AdvocateLawFirmListView, DeleteAdvocateLawFirmView, AssociationAdvocateViewUsingID,
-                      AdvocateMembershipsView, AdvocateMembershipsViewUsingID, AdvocatesProfileView )
+                      AdvocateMembershipsView,AdvocateAssociationMembershipStatus, AdvocateMembershipsViewUsingID,
+                       AdvocateCurrentMembershipExpiry, AdvocatesProfileView )
 
 urlpatterns = [
    path("list", AdvocatesListView.as_view(), name = "AdvocatesListView"),
@@ -29,5 +30,15 @@ urlpatterns = [
    path("membership/list/<id>", AdvocateMembershipsViewUsingID.as_view(), name = "AssociationMembershipViewUsingID"),   
 
    path("profile", AdvocatesProfileView.as_view(), name = "AdvocatesProfileView"),
+
+
+# NEW
+
+
+# membership status for advocate profile to know pending or approvied by anyone
+   path("membership-status", AdvocateAssociationMembershipStatus.as_view(), name = "AdvocateAssociationMembershipStatus"),
+
+   path("membership-expiry", AdvocateCurrentMembershipExpiry.as_view() ,name="AdvocateCurrentMembershipExpiry"),
+
 
 ]

@@ -7,6 +7,7 @@ LAWFIRM_INVITATION_STATUS_CHOICES = [
         ('ACCEPTED', 'Accepted'),
     ]
 
+
 class LawFirm(models.Model):
     name=models.CharField(max_length=200)
     address=models.CharField(max_length=200)
@@ -35,9 +36,12 @@ class LawfirmAdmin(models.Model):
 
 class AdvocateLawfirm(models.Model):
     advocate = models.ForeignKey('userapp.Advocate',on_delete=models.CASCADE)
-    advocate_status = models.BooleanField(default=True)
+    advocate_status = models.BooleanField(default=True)  #for suspension
     lawfirm = models.ForeignKey(LawFirm,on_delete=models.CASCADE)
     invitation_status= models.BooleanField(default=False)
+    is_admin = models.BooleanField(default = False)
+    is_owner = models.BooleanField(default = False)
+
 
 
 class LawfirmNotification(models.Model):

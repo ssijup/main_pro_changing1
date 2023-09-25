@@ -48,6 +48,8 @@ class CourtListView(APIView):
         serializer = CourtListSerializer(advocates, many = True)
         return Response(serializer.data,status= status.HTTP_200_OK)
 
+
+# To avoid listing of courts alredy assigned to a Registrar
 class CourtSortedListView(APIView): 
 
     def get(self, request):
@@ -94,7 +96,7 @@ class EditCourtView(APIView):
 
 
 class AssociationListView(APIView):
-    permission_classes = [IsAuthenticatedNetmagicsAdmin ]
+    # permission_classes = [IsAuthenticatedNetmagicsAdmin ]
 
     def get(self, request):
         print('ooo ',request.headers)
@@ -409,6 +411,9 @@ class ToggleMembershipFineAmountView(APIView):
         data['association_id'] = id
         serializer=MembershipFineAmountSerializer(data=data)
         if serializer.is_valid():
+            MembershipFineAmount.objects.filter(association__id = id).delete()
+            print(association.name)
+            print('deleted')
             serializer.save()
             return Response({"message" : "Fine amount set sucessfully"},status=status.HTTP_201_CREATED)
         return Response({"message" : "Something went wrong"},status=status.HTTP_400_BAD_REQUEST)                                
@@ -437,7 +442,7 @@ class ToggleMembershipFineAmountView(APIView):
         except MembershipFineAmount.DoesNotExist:
             return Response({"message" : "The finr amount could not be found"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-                    return Response({"message" : "An unexcepted error occured "+str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({"message" : "An unexcepted error occured "},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 class MembershipFineGetView(APIView):
@@ -476,7 +481,7 @@ class NotificationView(APIView):
                 # notification=Notification(association=association)
                 # notification.save()
                 return Response({"message":"Notification content created successfully"})
-            return Response({"message" : "Something went wrong"},status=status.HTTP_400_BAD_REQUEST)                                
+            return Response({"message" : "Something went wrong"},status=status.HTTP_400_BAD_REQUEST)                            
         except Association.DoesNotExist:
             return Response({"message":"Association could not be found"})
         except Exception as e:
@@ -517,22 +522,26 @@ class NotificationView(APIView):
 
 
 
+
+
 class MembershipPaymentView(APIView):
     # permission_classes = [ IsAuthenticatedNetmagicsAdmin | IsAuthenticatedAdvocate]
     
     def expiry_plan_calculation(request, plan_data):
+        
         if plan_data.unit_of_plan == "month":
-            payment_expiry_date = datetime.now() + timedelta(days=30 * plan_data.duration)
-            return payment_expiry_date
+            print("montssssssssssss")
+            payment_expiry_date = timezone.now() + timedelta(days=30 * plan_data.duration)
+            print()
+            return payment_expiry_date.date()
         elif plan_data.unit_of_plan == "year":
-            payment_expiry_date = datetime.now() + timedelta(days=365 * plan_data.duration)
-            return payment_expiry_date
+            print("yearrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
+            payment_expiry_date = timezone.now() + timedelta(days=365 * plan_data.duration)
+            return payment_expiry_date.date()
         else:
             return Response({"message" : "Incorrect date format"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-
-
-
+    
+ 
     def post(self ,request,user_id,plan_id,association_id):
      
         if user_id is None or plan_id is None or association_id is None:
@@ -541,12 +550,12 @@ class MembershipPaymentView(APIView):
             association_data = Association.objects.get(id = association_id)
             user_data = Advocate.objects.get(id = user_id)
             plan_data = MembershipPlan.objects.get(id = plan_id)
-            fine_amount_obj = MembershipFineAmount.objects.filter().order_by('-id').first()
+            fine_amount_obj = MembershipFineAmount.objects.filter().first()
             fine_amount = fine_amount_obj.fine_amount
             user_serializer = NormalAdvocateSerializer(user_data)
             plan_serializer = MembershipPlanSerializer(plan_data)
             membership_total_amount = plan_data.membership_price
-            if AssociationMembershipPayment.objects.filter(for_user_details=user_data).exists:
+            if AssociationMembershipPayment.objects.filter(for_user_details=user_data,payment_association =association_data  ).exists:
                 user_last_payment = AssociationMembershipPayment.objects.filter( for_user_details = user_data).order_by('-payment_done_at').first()
                 if user_last_payment:
                     if user_last_payment.payment_expiry_date < timezone.now().date():
@@ -556,7 +565,7 @@ class MembershipPaymentView(APIView):
                 # else :
                 #     return Response({"message" : "Something went wrong"} ,status=status.HTTP_100_CONTINUE)
             payment_expiry_date =self.expiry_plan_calculation(plan_data)
-            print("jjjjjjjjjjjjjj")
+            print(payment_expiry_date,"  jjjjjjjjjjjjjj")
 
             if association_data.instamojo_API_KEY=='' or association_data.instamojo_AUTH_TOKEN=='':
                 api = Instamojo(api_key=settings.API_KEY, auth_token=settings.AUTH_TOKEN, endpoint='https://test.instamojo.com/api/1.1/')
@@ -565,7 +574,7 @@ class MembershipPaymentView(APIView):
             print("APIIIII 1:",api)
             response = api.payment_request_create(
             purpose= "Membership" ,
-            amount =  membership_total_amount,
+            amount =  membership_total_amount ,
             buyer_name = user_data.user.name ,
             email= user_data.user.email,
             redirect_url= 'http://127.0.0.1:8000/association/Paymentsucessfull/'
@@ -577,7 +586,7 @@ class MembershipPaymentView(APIView):
 
             print(response ,"payment")
             if response['success'] == True :
-                AssociationPaymentRequest.objects.create(
+                request_obj =AssociationPaymentRequest.objects.create(
                     payment_request_id = response['payment_request']['id'],
                     payment_requested_user = user_data,
                     payment_requested_plan = plan_data,
@@ -585,6 +594,10 @@ class MembershipPaymentView(APIView):
                     payment_total_amount_paid = membership_total_amount,
                     payment_association = association_data
                 )
+                if fine is not None:
+                    request_obj.have_fine = fine
+                    request_obj.save()
+
                 payment_request_url = response['payment_request']['longurl']
 
                 return Response( {"message" : "Payment request intiated sucessfully" ,"payment_request_url" :payment_request_url, "data" : user_serializer.data ,
@@ -596,9 +609,7 @@ class MembershipPaymentView(APIView):
         except MembershipFineAmount.DoesNotExist:
             return Response({"message": "MembershipFine does not exist"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            print("oooooooooooooooovvvv"+str(e))
-
-            return Response({"message": "Something went wrong: "+str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"message": "Something went wrong "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -617,6 +628,7 @@ class Paymentsucessfull(APIView):
         payment_expiry_date = payment_requested_user.payment_expiry_date
         membership_total_amount = payment_requested_user.payment_total_amount_paid
         association_data = payment_requested_user.payment_association
+        fine =  payment_requested_user.have_fine
 
         if association_data.instamojo_API_KEY=='' or association_data.instamojo_AUTH_TOKEN=='':
             api = Instamojo(api_key=settings.API_KEY, auth_token=settings.AUTH_TOKEN, endpoint='https://test.instamojo.com/api/1.1/')
@@ -628,7 +640,7 @@ class Paymentsucessfull(APIView):
         print(response,"siju")
         if response['success'] == True :
             if response['payment_request']['status'] == 'Completed' and response['payment_request']['payment']['status'] == 'Credit' :
-                AssociationMembershipPayment.objects.create(
+                latest_membership = AssociationMembershipPayment.objects.create(
                     for_payment_plan = plan_data,
                     for_user_details = user_data,
                     payment_id = response['payment_request']['id'],
@@ -636,12 +648,25 @@ class Paymentsucessfull(APIView):
                     payment_expiry_date = payment_expiry_date,
                     payment_total_amount_paid = membership_total_amount,
                     payment_association = association_data,
-                    payment_status_of_gateway = response['payment_request']['payment']['status']
+                    payment_status_of_gateway = response['payment_request']['payment']['status'],
+                    have_fine = fine,
+                    is_current = True
                     )
+                # if fine is not None:
+                #     latest_membership.have_fine = fine
+                #     latest_membership.save()
+
+                old_memberships = AssociationMembershipPayment.objects.filter(payment_association = association_data,for_user_details = user_data).exclude(id = latest_membership.id)
+                if  old_memberships is not None:
+                    for each in old_memberships:
+                        each.is_current = False
+                        each.save()
+
                 AdvocateAssociation.objects.create(
                     advocate = user_data,
-                    association = association_data,
-                    advocate_status = True)
+                    association = association_data
+                    # advocate_status = True
+                    )
                 print(membership_total_amount)
                 return Response( {"message" : "Payment sucessfull"} ,status = status.HTTP_200_OK)
             return Response({"message" : "Payment request intiated but didn't debited the amount (payment status : pending)"} ,status = status.HTTP_402_PAYMENT_REQUIRED)
@@ -748,28 +773,52 @@ class AdvocatesViewUsingID(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
-# new
+# NEW VIEWS
+
+# Advocate Membership approving by assocition admin or registrar view
 class MembershipApprovalView(APIView):
-    permission_classes = [IsAuthenticatedNetmagicsAdmin | IsAuthenticatedAssociationAdmin | IsAuthenticatedRegistrar]
+    # permission_classes = [IsAuthenticatedNetmagicsAdmin | IsAuthenticatedAssociationAdmin | IsAuthenticatedRegistrar]
 
     def patch(self, request, id):
-        
         auth_user = request.user
         data = request.data
         try:
             advocate = Advocate.objects.get(id = id)
-            adv_asso = AdvocateAssociation.objects.get(advocate = advocate )
+            adv_asso = AdvocateAssociation.objects.get(advocate = advocate)
         except Advocate.DoesNotExist:
             return Response({'message' : 'User could not be found.. Please try again later'}, status=status.HTTP_400_BAD_REQUEST)
         except AdvocateAssociation.DoesNotExist:
             return Response({'message' : 'Advocate could not be found.. Please try again later'}, status=status.HTTP_400_BAD_REQUEST)
         data = request.data.copy()
         data['auth_user_id'] = auth_user.id
-        serilaizer = MembershipApprovalSerilizer(adv_asso,data= data, partial = True)  
+        serilaizer = MembershipApprovalSerilizer(adv_asso ,data= data, partial = True)
         if serilaizer.is_valid():
+            if serilaizer.validated_data['approval_status'] == 'APPROVED':
+                if serilaizer.validated_data['advocate_status'] == False :
+                    advocate.is_verified = True
+                    advocate.save()
             serilaizer.save()
             return Response({'message' : 'Status updated sucessfully' , 'data' : serilaizer.data}, status=status.HTTP_200_OK)
         print(serilaizer.errors)
         return Response({'message' : 'Validation failed.. Please try again later'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    
+
+# to displayAdvocate membership rtequest in association admin dashboard
+class AdvocateMembershipRequestInAssociation(APIView):
+    # permission_classes = []
+
+    def get(self, request):
+        authenticated_admin = request.user
+        try :
+            admin_association = AssociationSuperAdmin.objects.get(user = authenticated_admin)
+        except AssociationSuperAdmin.DoesNotExist:
+            return Response({'message' : 'Admin could not be found... Try after sometime' })
+        advocates = AdvocateAssociation.objects.filter(association = admin_association)
+        serializer = AdvocateAssociationSerializer(advocates, many = True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 
 

@@ -5,6 +5,7 @@ from userapp.models import Advocate
 
 
 class AdvocateLawfirmSerializer(serializers.ModelSerializer):
+    
     class Meta:
         model = AdvocateLawfirm
         fields = "__all__"
