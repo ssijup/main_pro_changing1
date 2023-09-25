@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import (LawFirmListView,LawfirmEditFormView, NotificationView, SuspendLawFirmView,EditLawfirmView, DeletelawFirmView,
-                     LawfirmCountView, LawFirmAdvocateListView,NotificationGetView, DeleteLawFirmAdvocateView,LawfirmInvitationRequestView, CreateLawFirmView)
+from .views import (LawFirmListView,LawfirmEditFormView, LawfirmNotificationView, SuspendLawFirmView,EditLawfirmView, DeletelawFirmView,
+                     LawfirmCountView, LawFirmAdvocateListView,LawfirmNotificationGetView, DeleteLawFirmAdvocateView,LawfirmInvitationRequestView, CreateLawFirmView)
 
 
 urlpatterns = [
@@ -21,9 +21,10 @@ urlpatterns = [
    #new
    path("invite-advocate/<adv_id>", LawfirmInvitationRequestView.as_view(),  name= "LawfirmInvitationRequestView"),
 
-   path("notification/list/<id>",NotificationGetView.as_view() ,name="NotificationGetView"),
-   path("notification/edit/<id>",NotificationView.as_view() ,name="NotificationView"),
-   path("notification/create/<id>",NotificationView.as_view() ,name="NotificationView"),
-   path("notification/delete/<id>",NotificationView.as_view() ,name="NotificationView"),
-
+   path("notification/list/<id>",LawfirmNotificationGetView.as_view() ,name="LawfirmNotificationGetView"),
+   path("notification/edit/<id>",LawfirmNotificationView.as_view() ,name="LawfirmNotificationView"),
+   path("notification/create/<id>",LawfirmNotificationView.as_view() ,name="LawfirmNotificationView"),
+   path("notification/delete/<id>",LawfirmNotificationView.as_view() ,name="LawfirmNotificationView"),
 ]
+
+

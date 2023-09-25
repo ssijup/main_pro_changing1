@@ -1,11 +1,11 @@
 from .serializers import CustomTokenObtainPairSerializer, PasswordChangeSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
-from .serializers import CustomTokenObtainPairSerializer
+from .serializers import CustomTokenObtainPairSerializer, EmailOtpRequestSerializer, EmailOtpConfirmSerializer
 from rest_framework_simplejwt.state import token_backend
 from rest_framework.response import Response
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import UserData, Advocate
 from rest_framework import status
 
@@ -42,7 +42,7 @@ class AdvocatesCountView(APIView):
 
 
 class TestapiForAuthr(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         user=request.user
         print("user :",user.name,"  ",user.id,"  ", user.email)
@@ -71,3 +71,48 @@ class TypeOfUserGetView(APIView):
             return Response(user.has_related_objects())
         else:
             return Response(user.has_related_objects())
+        
+
+from django.core.mail import send_mail
+from django.conf import settings
+import random
+
+class ForgotPasswordEmailRequest(APIView):  
+    def post(self, request):
+        serializer = EmailOtpRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            otp = random.randint(100001, 999999)
+            print("OTP",otp)
+            print(type(otp))
+            email = serializer.validated_data['email']
+            try:
+                UserData.objects.filter(email=email).update(otp=otp)
+            except:
+                return Response({'message': 'something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+            subject = 'Email Verification OTP'
+            message = f'Your OTP for email verification is: {otp}'
+            from_email = settings.DEFAULT_FROM_EMAIL
+            recipient_list = [email]
+            send_mail(subject, message, from_email, recipient_list)
+            return Response({'message': 'otp sent successfully'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ForgotPasswordEmailConfirmation(APIView):  
+    def post(self, request):
+        serializer = EmailOtpConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            otp = serializer.validated_data['otp']
+            email = serializer.validated_data['email']
+            new_password = serializer.validated_data['new_password']
+            user = UserData.objects.get(email=email,otp=otp)
+            print(user)
+            if user is not None:
+                user.set_password(new_password)
+                user.save()
+                otp = random.randint(100001, 999999)
+                UserData.objects.filter(email=email).update(otp=otp)
+            else:
+                return Response({'message': 'something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({'message': 'password changed successfully'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -23,3 +23,17 @@ class UserSerializer(serializers.ModelSerializer):
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
+
+
+class EmailOtpRequestSerializer(serializers.Serializer):
+    email = serializers.CharField(required=True)
+
+# class EmailOtpConfirmSerializer(serializers.Serializer):
+#     otp = serializers.CharField(required=True)
+#     new_password = serializers.CharField(required=True)
+#     email = serializers.CharField(required=True)
+
+class EmailOtpConfirmSerializer(serializers.Serializer):
+    otp = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+    email = serializers.CharField(required=True)

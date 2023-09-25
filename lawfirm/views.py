@@ -5,6 +5,7 @@ from rest_framework import serializers
 from django.shortcuts import render
 from rest_framework import status
 from userapp.models import Advocate
+from .models import LawfirmAdmin
 
 from association.permissions import IsAuthenticatedNetmagicsAdmin
 from .permissions import IsAuthenticatedLawfirmAdmin
@@ -147,13 +148,14 @@ class DeleteLawFirmAdvocateView(APIView):
 
 
 class LawfirmInvitationRequestView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request, adv_id):
-        lawfirmadmin = request.user 
+        lawfirmadmin = request.user
         try :
-            admin_obj = LawFirm.objects.get(user = lawfirmadmin)
+            admin_obj = LawfirmAdmin.objects.get(user = lawfirmadmin)
             lawfirm = admin_obj.lawfirm
             advocate = Advocate.objects.get(id = adv_id)
-            inviation = AdvocateLawfirm.objects.get(advocate = advocate, lawfirm = lawfirm)
+            # inviation = AdvocateLawfirm.objects.get(advocate = advocate, lawfirm = lawfirm)
             AdvocateLawfirm.objects.create(advocate = advocate, lawfirm = lawfirm)
             return Response({'message' : ' Invitation Request send sucessfully'}, status=status.HTTP_201_CREATED)
         except LawFirm.DoesNotExist:
@@ -163,8 +165,7 @@ class LawfirmInvitationRequestView(APIView):
         except AdvocateLawfirm.DoesNotExist:
                 return Response({'message' : 'An error  occured at this moment... Try agin later'} , status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'message' : 'An unexcepted  error occur'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+            return Response({'message' : 'An unexcepted  error occur'+str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class LawfirmAcceptInvitationByAdvocate(APIView):
@@ -190,7 +191,7 @@ class LawfirmAcceptInvitationByAdvocate(APIView):
 
 
 
-class NotificationGetView(APIView):
+class LawfirmNotificationGetView(APIView):
     # permission_classes = [IsAuthenticated]LawfirmNotification
 
     def get(self, request, id):
@@ -199,7 +200,7 @@ class NotificationGetView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
 
 
-class NotificationView(APIView):
+class LawfirmNotificationView(APIView):
     # permission_classes = [IsAuthenticatedNetmagicsAdmin | IsAuthenticatedAssociationAdmin]
 
     def post(self, request, id ):

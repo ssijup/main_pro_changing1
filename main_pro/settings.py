@@ -184,3 +184,11 @@ MEDIA_ROOT = BASE_DIR
 MEDIA_URL = '/media/'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587  
+EMAIL_USE_TLS = True  
+EMAIL_HOST_USER = 'djangoprojectuse@gmail.com'  
+EMAIL_HOST_PASSWORD = 'zjne jjac kogd qwmz'  
+DEFAULT_FROM_EMAIL = 'Masked name'
