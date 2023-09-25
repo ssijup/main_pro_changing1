@@ -75,6 +75,8 @@ class AssociationMembershipPayment(models.Model):
     payment_total_amount_paid = models.IntegerField(default=0)
     payment_status_of_gateway = models.CharField(max_length=25 ,default= 'failed')
     payment_association=models.ForeignKey(Association,on_delete=models.CASCADE, default=0)
+    is_current = models.BooleanField(default=False)
+    have_fine = models.PositiveIntegerField(default=0)
     def __str__(self):
         return str(self.id)
 
@@ -86,6 +88,7 @@ class AssociationPaymentRequest(models.Model):
     payment_expiry_date = models.DateField(default='2000-01-01')
     payment_total_amount_paid = models.IntegerField(default=0)
     payment_association=models.ForeignKey(Association,on_delete=models.CASCADE, default=0)
+    have_fine = models.PositiveIntegerField(default=0)
 
 
 class AdvocateAssociation(models.Model):
