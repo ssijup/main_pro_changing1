@@ -1,10 +1,12 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from django.shortcuts import render
 from rest_framework import status
 from userapp.models import Advocate
+from .models import LawfirmAdmin
 
 from association.permissions import IsAuthenticatedNetmagicsAdmin
 from .permissions import IsAuthenticatedLawfirmAdmin
@@ -22,20 +24,26 @@ class LawFirmListView(APIView):
         serializer = LawFirmListSerializer(lawfirm, many = True)
         return Response(serializer.data,status= status.HTTP_200_OK)
     
-
+     
+#creating a lawfirm and making the created user as the admin and owner of the lawfirm
 class CreateLawFirmView(APIView):
     def post(self, request, user_id):
         data = request.data
         data['created_by']= user_id
+        try :
+            advocate = Advocate.objects.get(id = user_id)
+        except Advocate.DoesNotExist:
+             return Response({'message' : 'Advocate could not be found at this moment... Please try after sometime'})
         serializer = LawFirmListSerializer(data=data)
         try:
             if serializer.is_valid(raise_exception=True):
-                serializer.save()
+                lawfirm=serializer.save()
+                AdvocateLawfirm.objects.create(advocate=advocate,lawfirm =lawfirm, invitation_status = True, is_admin = True, is_owner = True )
                 return Response({"message": "Lawfirm details created successfully"}, status=status.HTTP_201_CREATED)
 
-        except Exception as e:  
+        except serializers.ValidationError:  
             return Response({
-                "message": "Validation failed"+str(e),
+                "message": "Validation failed"
             }, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
@@ -44,6 +52,28 @@ class CreateLawFirmView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
+#creating lawfirm admin by the lawfirm owner only
+class CreateLawfirmAdmin(APIView):
+    # permission_classes = [isOwner]
+
+    def post(self, request, adv_id,lawfirm_id):
+        try :
+            advocate = Advocate.objects.get(id =adv_id)
+            lawfirm = LawFirm.objects.get(id = lawfirm_id)
+            admin = AdvocateLawfirm.objects.get(advocate = advocate, lawfirm = lawfirm)
+            admin.is_admin = True
+            admin.save()
+            return Response({'message' : 'Successfully made him as the admin'})
+        except Advocate.DoesNotExist:
+            return Response({"message" : "Advocate could not be found"},status=status.HTTP_400_BAD_REQUEST)
+        except LawFirm.DoesNotExist:
+            return Response({"message" : "Lawfirm could not be found"},status=status.HTTP_400_BAD_REQUEST)
+        except AdvocateLawfirm.DoesNotExist:
+            return Response({"message" : "Unable to find the user at this moment ... Please try after sometime"},status=status.HTTP_400_BAD_REQUEST)
+        
+
+        
+          
 class SuspendLawFirmView(APIView):
     # permission_classes = [IsAuthenticatedNetmagicsAdmin]
 
@@ -142,18 +172,19 @@ class DeleteLawFirmAdvocateView(APIView):
             return Response({"message" : "The LawFirm cout not be found"})
         except Exception as e:
             return Response({
-                "message": "An unexpected error occurred",
+                "message": "An unexpected error occurred"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+#Sending invitaion to advocate to join the lawfirm
 class LawfirmInvitationRequestView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request, adv_id):
-        lawfirmadmin = request.user 
+        lawfirmadmin = request.user
         try :
-            admin_obj = LawFirm.objects.get(user = lawfirmadmin)
+            admin_obj = LawfirmAdmin.objects.get(user = lawfirmadmin)
             lawfirm = admin_obj.lawfirm
             advocate = Advocate.objects.get(id = adv_id)
-            inviation = AdvocateLawfirm.objects.get(advocate = advocate, lawfirm = lawfirm)
             AdvocateLawfirm.objects.create(advocate = advocate, lawfirm = lawfirm)
             return Response({'message' : ' Invitation Request send sucessfully'}, status=status.HTTP_201_CREATED)
         except LawFirm.DoesNotExist:
@@ -161,12 +192,12 @@ class LawfirmInvitationRequestView(APIView):
         except Advocate.DoesNotExist:
             return Response({'message' : 'Advocate could not be found at this moment... Try agin later'} , status=status.HTTP_404_NOT_FOUND)
         except AdvocateLawfirm.DoesNotExist:
-                return Response({'message' : 'An error  occured at this moment... Try agin later'} , status=status.HTTP_404_NOT_FOUND)
+                return Response({'message' : 'An error  occured at this moment... Try again later'} , status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'message' : 'An unexcepted  error occur'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'message' : 'An unexcepted  error occur'+str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-
+#Advocate accepting the invitation from lawfirm
 class LawfirmAcceptInvitationByAdvocate(APIView):
     def patch(self ,request, adv_id, lawfirm_id):
         try :
@@ -186,11 +217,34 @@ class LawfirmAcceptInvitationByAdvocate(APIView):
         except AdvocateLawfirm.DoesNotExist:
             return Response({'message' : 'Invitation cound not be send at this time... Try agin later'} , status=status.HTTP_404_NOT_FOUND)
 
-        
+
+#Displaying the invitaion from lawfirm in advocate profile 
+class LawfirmInvitaionInAdvocateProfile(APIView):
+    def get(self, request):
+         authenticated_adv = request.user
+         lawfirm_invitaion = AdvocateLawfirm.objects.filter(advocate__user = authenticated_adv).exclude(invitation_status = True)
+         serializer = AdvocateLawfirmSerializer(lawfirm_invitaion, many = True)
+         return Response(serializer.data, status = status.HTTP_200_OK)
+         
+         
+
+#Displaying the invitation status ,admin,owner  request in Lawfirm admin dashboard
+class LawfirmRelatedGetView(APIView):
+    def get(self , request,lawfirm_id):
+        admin = request.user
+        try:
+            lawfirm = LawFirm.objects.get(id = lawfirm_id)
+            adv_lawfirm = AdvocateLawfirm.objects.get(advocate__user = admin, lawfirm= lawfirm)
+        except LawFirm.DoesNotExist:
+            return Response({'message' : 'lawfirm could not be found at this moment... Try agin later'} , status=status.HTTP_404_NOT_FOUND)
+        except AdvocateLawfirm.DoesNotExist:
+            return Response({'message' : 'The advocate associated to the lawfirm could not be found at this moment... Try agin later'} , status=status.HTTP_404_NOT_FOUND)
+        serializer = AdvocateLawfirmSerializer(adv_lawfirm)
+        return Response(serializer.data , status=status.HTTP_200_OK)
 
 
 
-class NotificationGetView(APIView):
+class LawfirmNotificationGetView(APIView):
     # permission_classes = [IsAuthenticated]LawfirmNotification
 
     def get(self, request, id):
@@ -199,7 +253,7 @@ class NotificationGetView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
 
 
-class NotificationView(APIView):
+class LawfirmNotificationView(APIView):
     # permission_classes = [IsAuthenticatedNetmagicsAdmin | IsAuthenticatedAssociationAdmin]
 
     def post(self, request, id ):
@@ -250,3 +304,37 @@ class NotificationView(APIView):
         except Exception as e:
             return Response({"message": "An unexpected error occurred: "},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+#Suspendin advocates in Lawfirm
+class SuspendLawfirmAdvocates(APIView):
+    def patch(self , request, suspend_adv_id,lawfirm_id):
+        try :
+            advocate = Advocate.objects.get(id =suspend_adv_id)
+            lawfirm = LawFirm.objects.get(id = lawfirm_id)
+            suspend_related = AdvocateLawfirm.objects.get(advocate = advocate, lawfirm = lawfirm)
+            suspend_related.advocate_status = False
+            suspend_related.save()
+            return Response({'message' : 'Advocate suspended sucessfully'}, status= status.HTTP_200_OK)
+        except Advocate.DoesNotExist:
+            return Response({"message" : "Advocate could not be found"},status=status.HTTP_400_BAD_REQUEST)
+        except LawFirm.DoesNotExist:
+            return Response({"message" : "Lawfirm could not be found"},status=status.HTTP_400_BAD_REQUEST)
+        except AdvocateLawfirm.DoesNotExist:
+            return Response({"message" : "Unable to find the user at this moment ... Please try after sometime"},status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+# Withdrawing the invitaion for an advocate to join the Lawfirm
+class WithdrawInvitaionByLawfirm(APIView):
+    def patch(self , request,lawfirm_id, adv_id):
+        
+        # withdraw_invitation = AdvocateLawfirm.objects.get(advocate__id = adv_id, lawfirm__id = lawfirm_id)
+        invitation = get_object_or_404(AdvocateLawfirm, advocate__id=adv_id, lawfirm__id=lawfirm_id)
+        invitation.delete()
+        return Response({'message' : 'Invitation withdrawed sucessfull'}, status= status.HTTP_200_OK)
+
+
+
+

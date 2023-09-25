@@ -9,7 +9,7 @@ from .views import (CourtSortedListView,AssociationListView,CourtListView, Suspe
                     DeleteNormalAdminView,MembershipFineGetView,SuperAdminView, CreateSuperAdminView,DeleteSuperAdminView, 
                      CourtCountView, AssociationCountView, AssociationPaymentView, MembershipApprovalView,AssociationAdvocatesView,
                      MembershipPaymentListView, CreateAssociationView, AdvocatesViewUsingID,
-                     MembershipGetViewUsingAssociationID)
+                     MembershipGetViewUsingAssociationID, AdvocateMembershipRequestInAssociation)
 
 
 urlpatterns = [
@@ -84,8 +84,17 @@ urlpatterns = [
 
 
 # new
-   path("advocates/membershipapproval/<id>", MembershipApprovalView.as_view() ,name="MembershipApprovalView"),
+
+# Advocate Membership approving by assocition admin or registrar view
+   path("advocates/membership-approval/<id>", MembershipApprovalView.as_view() ,name="MembershipApprovalView"),
+
+# To avoid listing of courts alredy assigned to a Registrar
    path("court/sorted/list", CourtSortedListView.as_view() ,name="CourtSortedListView"),
+
+# to display Advocate membership rtequest in association admin dashboard
+   path("advocate/membership-request-list", AdvocateMembershipRequestInAssociation.as_view() ,name="AdvocateMembershipRequestInAssociation"),
+
+
 
 
 

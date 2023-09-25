@@ -96,9 +96,11 @@ class Advocate(models.Model):
     document_image=models.ImageField(upload_to='media/', null=True, blank=True)
     is_suspend=models.BooleanField(default=False)
     type_of_user = models.CharField(max_length=255,choices=USER_CHOICES,default='normal_advocate')
+    is_verified = models.BooleanField(default=False)
     def __str__(self):
         return self.user.email+" , "+self.type_of_user +","+str(self.id)
     
+
 class Registrar(models.Model):
     user = models.ForeignKey(UserData,on_delete=models.CASCADE)
     court=models.ForeignKey(Court,on_delete=models.CASCADE)

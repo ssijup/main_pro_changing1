@@ -68,14 +68,16 @@ MIDDLEWARE = [
 ]
 
 
+# CORS_ALLOW_HEADERS = [
+
+#     'Authorization',
+# ]
+
 IMPERSONATE_REQUIRE_SUPERUSER = False
 
 IMPERSONATE_CUSTOM_USER_QUERYSET = "netmagics.permissions.can_impersonate"
 
-CORS_ALLOW_HEADERS = [
 
-    'Authorization',
-]
 
 
 # AUTHENTICATION_BACKENDS = [

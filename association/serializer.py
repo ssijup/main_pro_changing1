@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from datetime import datetime
 
 from .models import (Association, Jurisdiction ,Court, MembershipPlan, MembershipFineAmount, 
                      Notification, AssociationMembershipPayment, AdvocateAssociation )
@@ -62,10 +63,14 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class AssociationMembershipPaymentSerializer(serializers.ModelSerializer):
+    for_user_details =NormalAdvocateSerializer()
+    for_payment_plan = MembershipPlanSerializer()
+    payment_association = AssociationListSerializer()
     class Meta:
         model=AssociationMembershipPayment
         fields="__all__"
-
+    def get_days_until_expiry(self, obj):
+        return (obj.payment_expiry_date - datetime.now().date()).days
 
 class AdvocateAssociationSerializer(serializers.ModelSerializer):
     advocate = NormalAdvocateSerializer()
