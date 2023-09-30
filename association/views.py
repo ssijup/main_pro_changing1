@@ -290,26 +290,6 @@ class DeleteSuperAdminView(APIView):
 
      
 
-            
-# class MembershipPlanView(APIView):
-    # permission_classes = [IsAuthenticated]
-
-    # def post(self ,request, id):
-    #     data = request.data
-    #     try:
-    #         association = Association.objects.get(id = id)
-    #     except Association.DoesNotExist:
-    #         return Response({"message" : "Association could not be found"}, status=status.HTTP_400_BAD_REQUEST)
-    #     data['association_id'] = id
-    #     serializer = MembershipPlanSerializer(data=data)
-    #     if serializer.is_valid():
-    #         plan = serializer.validated_data['duration']
-    #         unit = serializer.validated_data['unit_of_plan']
-    #         if MembershipPlan.objects.filter(duration = plan ,unit_of_plan = unit).exists() :
-    #             return Response({"message": "Plan already exits"} ,status =status.HTTP_409_CONFLICT)
-    #         serializer.save()
-    #         return Response({"message " : "Plan added sucesfully" ,'data' :serializer.data} ,status =status.HTTP_201_CREATED)
-    #     return Response({"message" : " Error Invalid data " } ,serializer.errors)
 
 class MembershipPlanView(APIView):
     def post(self ,request):
@@ -522,7 +502,7 @@ class NotificationView(APIView):
 
 
 
-
+# okeyy
 
 
 class MembershipPaymentView(APIView):
