@@ -113,3 +113,14 @@ class AssociationSuperAdmin(models.Model):
     def __str__(self): 
         return self.user.email + "," +str(self.id)
 
+
+class RawData(models.Model):
+    enrollment_id = models.CharField(max_length=25)
+    name = models.CharField(max_length=250)
+    place_of_pratice= models.CharField(max_length=250)
+    
+
+
+
+
+

@@ -2,13 +2,9 @@ from rest_framework import serializers
 
 from .models import LawFirm, AdvocateLawfirm, LawfirmNotification
 from userapp.models import Advocate
+from advocates.serializer import NormalAdvocateSerializer
 
 
-class AdvocateLawfirmSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = AdvocateLawfirm
-        fields = "__all__"
 
 
 class LawFirmListSerializer(serializers.ModelSerializer):
@@ -22,4 +18,16 @@ class LawFirmListSerializer(serializers.ModelSerializer):
 class LawFirmNotificationSerilaizer(serializers.ModelSerializer):
     class Meta:
         model = LawfirmNotification
+        fields = "__all__"
+
+
+
+
+
+class AdvocateLawfirmSerializer(serializers.ModelSerializer):
+    lawfirm = LawFirmListSerializer()
+    advocate = NormalAdvocateSerializer()
+    
+    class Meta:
+        model = AdvocateLawfirm
         fields = "__all__"

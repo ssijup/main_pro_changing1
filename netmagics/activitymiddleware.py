@@ -19,3 +19,8 @@ class CurrentUserMiddleware:
 def get_current_user():
     return getattr(_thread_locals, 'user', None)
 
+
+
+
+
+

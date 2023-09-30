@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from datetime import datetime, timedelta
@@ -6,12 +7,12 @@ from rest_framework import serializers
 from django.shortcuts import render
 from rest_framework import status
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
 
 from .serializer import ( MembershipApprovalSerilizer,AssociationListSerializer,CourtListSerializer,AssociationMembershipPaymentSerializer,
                          NotificationSerializer,MembershipFineAmountSerializer, MembershipPlanSerializer,
                          ListNormalAdminSerializer, ListSuperAdminSerializer, AdvocateAssociationSerializer )
-from .models import ( Association, Court, Jurisdiction,AssociationMembershipPayment,AssociationPaymentRequest, 
+from .models import ( RawData,Association, Court, Jurisdiction,AssociationMembershipPayment,AssociationPaymentRequest, 
                      MembershipPlan,MembershipFineAmount,Notification, AdvocateAssociation,
                       AssociationSuperAdmin )
 from userapp.models import UserData, Registrar
@@ -41,7 +42,7 @@ class CreateCourtView(APIView):
 
 
 class CourtListView(APIView): 
-    permission_classes = [IsAuthenticatedNetmagicsAdmin]
+    # permission_classes = [IsAuthenticatedNetmagicsAdmin]
 
     def get(self, request):
         advocates = Court.objects.all()
@@ -541,7 +542,7 @@ class MembershipPaymentView(APIView):
         else:
             return Response({"message" : "Incorrect date format"}, status=status.HTTP_401_UNAUTHORIZED)
     
- 
+    @transaction.atomic
     def post(self ,request,user_id,plan_id,association_id):
      
         if user_id is None or plan_id is None or association_id is None:
@@ -818,6 +819,9 @@ class AdvocateMembershipRequestInAssociation(APIView):
         advocates = AdvocateAssociation.objects.filter(association = admin_association)
         serializer = AdvocateAssociationSerializer(advocates, many = True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 
 
 
