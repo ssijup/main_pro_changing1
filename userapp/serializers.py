@@ -10,7 +10,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Include the email in the token's payload
         token['email'] = user.email
-
         return token
     
 class UserSerializer(serializers.ModelSerializer):

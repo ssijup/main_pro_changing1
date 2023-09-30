@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from datetime import datetime, timedelta
@@ -6,12 +7,12 @@ from rest_framework import serializers
 from django.shortcuts import render
 from rest_framework import status
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
 
 from .serializer import ( MembershipApprovalSerilizer,AssociationListSerializer,CourtListSerializer,AssociationMembershipPaymentSerializer,
                          NotificationSerializer,MembershipFineAmountSerializer, MembershipPlanSerializer,
                          ListNormalAdminSerializer, ListSuperAdminSerializer, AdvocateAssociationSerializer )
-from .models import ( Association, Court, Jurisdiction,AssociationMembershipPayment,AssociationPaymentRequest, 
+from .models import ( RawData,Association, Court, Jurisdiction,AssociationMembershipPayment,AssociationPaymentRequest, 
                      MembershipPlan,MembershipFineAmount,Notification, AdvocateAssociation,
                       AssociationSuperAdmin )
 from userapp.models import UserData, Registrar
@@ -41,7 +42,7 @@ class CreateCourtView(APIView):
 
 
 class CourtListView(APIView): 
-    permission_classes = [IsAuthenticatedNetmagicsAdmin]
+    # permission_classes = [IsAuthenticatedNetmagicsAdmin]
 
     def get(self, request):
         advocates = Court.objects.all()
@@ -289,26 +290,6 @@ class DeleteSuperAdminView(APIView):
 
      
 
-            
-# class MembershipPlanView(APIView):
-    # permission_classes = [IsAuthenticated]
-
-    # def post(self ,request, id):
-    #     data = request.data
-    #     try:
-    #         association = Association.objects.get(id = id)
-    #     except Association.DoesNotExist:
-    #         return Response({"message" : "Association could not be found"}, status=status.HTTP_400_BAD_REQUEST)
-    #     data['association_id'] = id
-    #     serializer = MembershipPlanSerializer(data=data)
-    #     if serializer.is_valid():
-    #         plan = serializer.validated_data['duration']
-    #         unit = serializer.validated_data['unit_of_plan']
-    #         if MembershipPlan.objects.filter(duration = plan ,unit_of_plan = unit).exists() :
-    #             return Response({"message": "Plan already exits"} ,status =status.HTTP_409_CONFLICT)
-    #         serializer.save()
-    #         return Response({"message " : "Plan added sucesfully" ,'data' :serializer.data} ,status =status.HTTP_201_CREATED)
-    #     return Response({"message" : " Error Invalid data " } ,serializer.errors)
 
 class MembershipPlanView(APIView):
     def post(self ,request):
@@ -521,7 +502,7 @@ class NotificationView(APIView):
 
 
 
-
+# okeyy
 
 
 class MembershipPaymentView(APIView):
@@ -541,7 +522,7 @@ class MembershipPaymentView(APIView):
         else:
             return Response({"message" : "Incorrect date format"}, status=status.HTTP_401_UNAUTHORIZED)
     
- 
+    @transaction.atomic
     def post(self ,request,user_id,plan_id,association_id):
      
         if user_id is None or plan_id is None or association_id is None:
@@ -818,6 +799,9 @@ class AdvocateMembershipRequestInAssociation(APIView):
         advocates = AdvocateAssociation.objects.filter(association = admin_association)
         serializer = AdvocateAssociationSerializer(advocates, many = True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 
 
 

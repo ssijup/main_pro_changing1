@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import ( AdvocatesListView, SuspendAdvocateView, EditAdvocateProfileView,
+from .views import (FirstLoginEnrollmentIdChecking, FirstLoginDetailsSubmmit,AdvocateOwnLawfirm, AdvocatesListView, SuspendAdvocateView, EditAdvocateProfileView,
                     CreateAdvocatesListView,AdvocateEditFormView,AdvocatesPaymentView, AssociationAdvocateView,
                      AdvocateLawFirmListView, DeleteAdvocateLawFirmView, AssociationAdvocateViewUsingID,
                       AdvocateMembershipsView,AdvocateAssociationMembershipStatus, AdvocateMembershipsViewUsingID,
@@ -32,13 +32,32 @@ urlpatterns = [
    path("profile", AdvocatesProfileView.as_view(), name = "AdvocatesProfileView"),
 
 
-# NEW
+
 
 
 # membership status for advocate profile to know pending or approvied by anyone
    path("membership-status", AdvocateAssociationMembershipStatus.as_view(), name = "AdvocateAssociationMembershipStatus"),
-
    path("membership-expiry", AdvocateCurrentMembershipExpiry.as_view() ,name="AdvocateCurrentMembershipExpiry"),
 
 
+
+#Lising advocate owned lawfirm
+   path("own-lawfirm", AdvocateOwnLawfirm.as_view() ,name="AdvocateOwnLawfirm"),
+
+#NEW
+
+# POST -to check the entrollment id while first login
+   path("id-verification", FirstLoginEnrollmentIdChecking.as_view() ,name="FirstLoginEnrollmentIdChecking"),
+
+#first login details submmiting
+   path("login-details-submmit/<enro_id>", FirstLoginDetailsSubmmit.as_view() ,name="FirstLoginDetailsSubmmit"),
+
+
 ]
+
+# {
+# "name" : "sonu",
+# "password" : "sonu",
+# "email" : "sonu@gmail.com",
+
+# }

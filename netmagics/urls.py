@@ -3,7 +3,8 @@ from .views import AcivityTrackerView
 
 from django.urls import path, include
 
-from .views import StartImpersonatingByNetmagicsAdmin,StopImpersonatingByNetmagicsAdmin, NetmagicsAdminCreateView, ListNetmagicsAdmin, DeleteNetmagicsAdmin
+from .views import (LoginForParticularAssocitionUser, ArchivingActivityTracterOldData, StartImpersonatingByNetmagicsAdmin,
+                    StopImpersonatingByNetmagicsAdmin, NetmagicsAdminCreateView, ListNetmagicsAdmin, DeleteNetmagicsAdmin)
 
 
 urlpatterns = [
@@ -15,6 +16,15 @@ urlpatterns = [
 
     path('admin/impersonate/start/<id>', StartImpersonatingByNetmagicsAdmin.as_view(), name='start_impersonation'),
     path('admin/impersonate/stop/<id>', StopImpersonatingByNetmagicsAdmin.as_view(), name='stop_impersonation'),
+
+    path('archive-activitytrcker', ArchivingActivityTracterOldData.as_view(), name='ArchivingActivityTracterOldData'),
+
+    #NEW
+    path('auth-user', LoginForParticularAssocitionUser.as_view(), name='LoginForParticularAssocitionUser'),
+
+    
+
+    
 ]
 
 

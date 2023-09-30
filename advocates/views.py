@@ -10,38 +10,49 @@ from lawfirm.permissions import IsAuthenticatedLawfirmAdmin
 from .permissions import IsAuthenticatedAdvocate
 from rest_framework import serializers
 from userapp.models import Advocate,UserData
-from association.models import AssociationMembershipPayment, AdvocateAssociation
+from association.models import RawData, AssociationMembershipPayment, AdvocateAssociation
 from lawfirm.models import AdvocateLawfirm
 from association.serializer import AdvocateAssociationSerializer
 from lawfirm.serializer import AdvocateLawfirmSerializer
 from association.serializer import AssociationMembershipPaymentSerializer
+
+
+
 
 class AdvocatesListView(APIView):
     # permission_classes = [IsAuthenticated]
 
     def get(self, request):
         normal_advocate = Advocate.objects.filter(type_of_user='normal_advocate')
-        serializer = NormalAdvocateSerializer(normal_advocate, many=True)
+        serializer = NormalAdvocateSerializer(normal_advocate, many=True, context = {'request' : request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
 class CreateAdvocatesListView(APIView):
-    def post(self, request):        
+    def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
         name = request.data.get('name')
-        user = UserData.objects.create_user(email=email, password=password, name=name)
+        enrollment_id = request.data.get('enrollment_id')
+        if UserData.objects.filter(enrollment_id = enrollment_id).exists():
+            return Response({'message' : 'Enrollment ID alredy exists..'}, status=status.HTTP_400_BAD_REQUEST)
+        if UserData.objects.filter(email = email).exists():
+            return Response({'message' : 'Email alredy exists.. Try another one'}, status=status.HTTP_400_BAD_REQUEST)
+        if Advocate.objects.filter(enrollment_id = enrollment_id, is_verified = True).exists():
+            return Response({'message' : 'This user alredy exists'}, status=status.HTTP_400_BAD_REQUEST)
         
-        data = request.data.copy()  
-        data['user_id'] = user.id  
+        user = UserData.objects.create_user(email=email, password=password, name=name)
+
+        data = request.data.copy()
+        data['user_id'] = user.id
         data['type_of_user'] = 'normal_advocate'
 
-        serializer = NormalAdvocateSerializer(data=data)
+        serializer = NormalAdvocateSerializer(data=data, context = {'request' : request})
         
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "successfully created", "data": serializer.data}, status=status.HTTP_201_CREATED)
-
+        print(serializer.errors)
         return Response({"message": "validation failed", "data": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -52,7 +63,7 @@ class SuspendAdvocateView(APIView):
     def patch(self, request, id):
         try :
             advocate = Advocate.objects.get(id = id)
-            serializer=NormalAdvocateSerializer(advocate)
+            serializer=NormalAdvocateSerializer(advocate, context = {'request' : request})
             advocate.is_suspend = not advocate.is_suspend
             advocate.save()
 
@@ -86,7 +97,7 @@ class EditAdvocateProfileView(APIView):
                 UserData.objects.filter(id=advocate.user.id).update(name=name)
             # request.data['user'] = advocate.user.id
             #Editing Advocates Model
-            serializer = NormalAdvocateSerializer(advocate, data=request.data,partial=True)
+            serializer = NormalAdvocateSerializer(advocate, data=request.data,partial=True, context = {'request' : request})
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message" : "Advocate details updated sucessfully"},status=status.HTTP_200_OK)
@@ -105,7 +116,7 @@ class AdvocateEditFormView(APIView):
     def get(self, request, id) :
         try:
             advocate=Advocate.objects.get(id=id)
-            serializer=NormalAdvocateSerializer(advocate)
+            serializer=NormalAdvocateSerializer(advocate, context = {'request' : request})
             return Response(serializer.data ,status=status.HTTP_200_OK)
 
         except Advocate.DoesNotExist:
@@ -178,6 +189,7 @@ class AdvocateMembershipsView(APIView):
         serializer = AssociationMembershipPaymentSerializer(payments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
 class AdvocatesProfileView(APIView):
     def get(self, request):
         user = request.user
@@ -185,8 +197,7 @@ class AdvocatesProfileView(APIView):
             advocate = Advocate.objects.get(user=user)
         except Advocate.DoesNotExist:
             return Response({"detail": "Advocate not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = NormalAdvocateSerializer(advocate)
+        serializer = NormalAdvocateSerializer(advocate, context = {'request' : request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -211,3 +222,61 @@ class AdvocateCurrentMembershipExpiry(APIView):
         serializer = AssociationMembershipPaymentSerializer(adv_associations, many = True)
         return Response(serializer.data, status= status.HTTP_200_OK)
     
+
+#Dipaly the advocates owned lawfirm
+class AdvocateOwnLawfirm(APIView):
+    def get(self, request):
+       authenticated_adv= request.user
+       advocateslawfirm = AdvocateLawfirm.objects.filter(advocate__user = authenticated_adv, is_owner = True)
+       serializer = AdvocateLawfirmSerializer(advocateslawfirm, many = True)
+       return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+# to check the entollment id when the first time the user comes
+class FirstLoginEnrollmentIdChecking(APIView):
+    def post(self, request):
+        enrol_id = request.data.get('enrollment_id')
+        if RawData.objects.filter(enrollment_id = enrol_id).exists():
+            return Response({'message' : 'User found with this entrollment id'},status=status.HTTP_200_OK)
+        return Response({'message' : 'User not found with this entrollment id'},status=status.HTTP_200_OK)
+    
+
+class FirstLoginDetailsSubmmit(APIView):
+    def post(self, request,enro_id):
+        
+        email = request.data.get('email')
+        password = request.data.get('password')
+        phone = request.data.get('phone')
+        if UserData.objects.filter(email = email).exists():
+            return Response({'message' : 'Email alredy exists.. Try another one'}, status=status.HTTP_400_BAD_REQUEST)
+        if Advocate.objects.filter(enrollment_id =enro_id, is_verified = True).exists():
+            return Response({'message' : 'This Enrollment ID alredy exists'}, status=status.HTTP_400_BAD_REQUEST)
+        if Advocate.objects.filter(phone = phone).exists():
+            return Response({'message' : 'This Phone number alredy exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try :
+            rawdata = RawData.objects.get(enrollment_id = enro_id)
+        except RawData.DoesNotExist:
+            return Response({'message' : 'Enrollment id cound not be found.. Please check your id'})
+        name = rawdata.name
+        user = UserData.objects.create(email = email, name = name,password =password)
+        
+        data = request.data.copy()
+        data['user_id'] = user.id
+        data['type_of_user'] = 'normal_advocate'
+        data['enrollment_id'] = rawdata.enrollment_id
+        serializer = NormalAdvocateSerializer(data=data, context = {'request' : request})
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "successfully created", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
+        return Response({"message": "validation failed", "data": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+

@@ -80,10 +80,7 @@ urlpatterns = [
    # AssociationAdvocatesView
    path("advocates/list", AssociationAdvocatesView.as_view() ,name="AssociationAdvocatesView"),
    path("advocates/list/<id>", AdvocatesViewUsingID.as_view() ,name="AdvocatesViewUsingID"),
- 
 
-
-# new
 
 # Advocate Membership approving by assocition admin or registrar view
    path("advocates/membership-approval/<id>", MembershipApprovalView.as_view() ,name="MembershipApprovalView"),
@@ -93,9 +90,6 @@ urlpatterns = [
 
 # to display Advocate membership rtequest in association admin dashboard
    path("advocate/membership-request-list", AdvocateMembershipRequestInAssociation.as_view() ,name="AdvocateMembershipRequestInAssociation"),
-
-
-
 
 
 ]

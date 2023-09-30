@@ -6,13 +6,18 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from impersonate.views import impersonate as django_impersonate
 
-
+from django.http import HttpResponse
+from .tasks import archive_old_records
 from .models import NetmagicsAdmin
 from userapp.models import UserData
 from netmagics.models import ActivityTracker
 from .serializer import NetmagicsAdminSerializer
 from association.permissions import IsAuthenticatedNetmagicsAdmin, DeleteIsAuthenticatedNetmagicsAdmin
 from .serializer import ActivityTrackerSerializer
+from userapp.models import Advocate
+from association.models import AdvocateAssociation, AssociationSuperAdmin, Association
+from django.db.models import Q
+
 
 class NetmagicsAdminCreateView(APIView):
     def post(self , request):
@@ -64,7 +69,7 @@ class DeleteNetmagicsAdmin(APIView):
 
 class AcivityTrackerView(APIView):
     def get(self, request):
-        registrar = ActivityTracker.objects.all()
+        registrar = ActivityTracker.objects.all().order_by('-id')
         serializer = ActivityTrackerSerializer(registrar, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -90,4 +95,76 @@ class StopImpersonatingByNetmagicsAdmin(APIView):
         if response.status_code == 302:
             return Response({"message": "impersonation stopped"})
         return Response({"message": "You are not allowed for this action"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+
+
+
+
+# class ArchivingActivityTracterOldData(APIView):
+#     def archive_records_view(request):
+#         csv_path = archive_old_records()  # Call the function directly
+#         with open(csv_path, 'r') as csvfile:
+#             response = HttpResponse(csvfile.read(), content_type='text/csv')
+#             response['Content-Disposition'] = f'attachment; filename="{csv_path.split("/")[-1]}"'
+#             return response
+
+from django.views import View
+from django.http import HttpResponse, JsonResponse
+import os
+
+
+class ArchivingActivityTracterOldData(APIView):
+    def get(self, request):
+        try:
+            csv_path, message = archive_old_records()  # Unpack the returned tuple
+            print(csv_path,message,'555555555555555555555')
+            if csv_path is None: # Check if the path is None
+                return JsonResponse({"message": message})
+
+            # If you want to provide a downloadable CSV:
+            with open(csv_path, 'r') as csvfile:
+                response = HttpResponse(csvfile.read(), content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="{csv_path.split("/")[-1]}"'
+                return response
+
+        except Exception as e:
+            # Print the current directory for debugging
+            print("Current Directory:", os.getcwd())
+
+            # Consider logging the exception for more detailed debugging
+            # You can use Django's logging framework for this purpose:
+            # import logging
+            # logger = logging.getLogger(__name__)
+            # logger.error(e)
+            
+            return JsonResponse({"error": str(e)})
+        
+
+
+# class LoginForParticularAssocitionUser(APIView):
+#     def get(self, request, asso_id):
+#         user = request.user
+#         try:
+#             association = Association.objects.get(id = asso_id)
+#         except Association.DoesNotExist:
+#             return Response({'message' : 'Association does not exist'}, status=status.HTTP_400_BAD_REQUEST)       
+#         if AdvocateAssociation.objects.filter(advocate__user = user, association = association).exists() or AssociationSuperAdmin.objects.filter(user = user, association= association).exists :
+#             return Response({'message' : 'User found relation with this association'}, status=status.HTTP_200_OK)
+#         return Response({'message' : 'User not found in this association'}, status=status.HTTP_403_FORBIDDEN)
+
+
+class LoginForParticularAssocitionUser(APIView):
+    def get(self, request, asso_id):
+        user = request.user
+        try:
+            association = Association.objects.get(id = asso_id)
+        except Association.DoesNotExist:
+            return Response({'message' : 'Association does not exist'}, status=status.HTTP_400_BAD_REQUEST)       
+        if AssociationSuperAdmin.objects.filter(user = user).exists():
+            if AssociationSuperAdmin.objects.filter(user = user, association= association).exists:
+                return Response({'message' : 'User found asadmin with this association'}, status=status.HTTP_200_OK)
+            return Response({'message' : 'User is not an admin of this association'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'message' : 'User is global'}, status=status.HTTP_200_OK)
+
+
 

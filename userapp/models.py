@@ -88,10 +88,10 @@ USER_CHOICES = (
 
 class Advocate(models.Model):
     user = models.ForeignKey(UserData,on_delete=models.CASCADE)
-    date_of_birth = models.DateField(default='2000-01-01')
-    phone=models.CharField(max_length=200)
+    date_of_birth = models.DateField(null=True, blank=True)
+    phone=models.CharField(max_length=200, default='not given')
     enrollment_id=models.CharField(max_length=200)
-    specialization=models.CharField(max_length=200)
+    specialization=models.CharField(max_length=200 ,default='not given')
     address=models.CharField(max_length=200,default='not given')
     profile_image=models.ImageField(upload_to='media/', null=True, blank=True)
     document_image=models.ImageField(upload_to='media/', null=True, blank=True)
